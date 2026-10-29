@@ -4,7 +4,7 @@
 
 
 
-static int hello_init(void) {
+static int __init hello_init(void) {
     printk(KERN_INFO "hello init...\n");
 
     return 0;
