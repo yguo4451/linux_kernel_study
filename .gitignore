@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# 下载的第三方源码与压缩包（体积巨大，不纳入版本管理）
+/src/
+
+# 构建产物
+/build/
+/initramfs.cpio.gz
+
+# 内核模块编译产物
+*.o
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+*.cmd
+Module.symvers
+modules.order
+
+# 日志
+*.log
