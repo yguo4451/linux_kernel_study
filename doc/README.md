@@ -13,7 +13,7 @@
 | [03-filesystem](./03-filesystem/) | 文件系统与 procfs | 11 |
 | [04-scheduling](./04-scheduling/) | 进程调度 | 15 |
 | [05-memory](./05-memory/) | 内存管理 | 21 |
-| [06-module](./06-module/) | 内核模块与驱动 | 3 |
+| [06-module](./06-module/) | 内核模块与驱动 | 5 |
 
 ## 命名约定
 
@@ -148,5 +148,7 @@
 | 01 | [hello 模块与 taint 机制](./06-module/01-hello模块与taint机制.md) | 第一个内核模块全流程、编译三前提（Makefile/KDIR/Module.symvers）、taint 污染标记、lsmod 字段解读 |
 | 02 | [insmod 调用链](./06-module/02-insmod调用链.md) | finit_module/init_module 系统调用、幂等去重、load_module 十五步、do_init_module |
 | 03 | [模块重定位](./06-module/03-模块重定位.md) | layout_and_allocate 定址、simplify_symbols 定符号、apply_relocations 改写引用、arm64 指令级重定位 |
+| 04 | [EXPORT_SYMBOL 导出符号与模块依赖](./06-module/04-EXPORT_SYMBOL导出符号与模块依赖.md) | __ksymtab 段、find_symbol 二分查找、Module.symvers、ref_module 依赖链、lsmod used-by、引用计数 |
+| 05 | [模块参数 module_param](./06-module/05-模块参数module_param.md) | 宏展开、struct kernel_param、__param 段、parse_args 解析、param_ops、sysfs 参数接口 |
 
 > 后续教学新增的文档，放入对应子目录并同步更新本表。
