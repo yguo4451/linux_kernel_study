@@ -13,7 +13,7 @@
 | [03-filesystem](./03-filesystem/) | 文件系统与 procfs | 11 |
 | [04-scheduling](./04-scheduling/) | 进程调度 | 15 |
 | [05-memory](./05-memory/) | 内存管理 | 21 |
-| [06-module](./06-module/) | 内核模块与驱动 | 5 |
+| [06-module](./06-module/) | 内核模块与驱动 | 6 |
 
 ## 命名约定
 
@@ -150,5 +150,6 @@
 | 03 | [模块重定位](./06-module/03-模块重定位.md) | layout_and_allocate 定址、simplify_symbols 定符号、apply_relocations 改写引用、arm64 指令级重定位 |
 | 04 | [EXPORT_SYMBOL 导出符号与模块依赖](./06-module/04-EXPORT_SYMBOL导出符号与模块依赖.md) | __ksymtab 段、find_symbol 二分查找、Module.symvers、ref_module 依赖链、lsmod used-by、引用计数 |
 | 05 | [模块参数 module_param](./06-module/05-模块参数module_param.md) | 宏展开、struct kernel_param、__param 段、parse_args 解析、param_ops、sysfs 参数接口 |
+| 06 | [字符设备驱动](./06-module/06-字符设备驱动.md) | cdev、file_operations、注册三步、设备号、chrdev_open 多态、copy_to_user、read EOF |
 
 > 后续教学新增的文档，放入对应子目录并同步更新本表。
