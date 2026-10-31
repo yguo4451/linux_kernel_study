@@ -52,12 +52,12 @@ static ssize_t hello_read(struct file* file, char __user *buf, size_t len, loff_
         len = msg_len;
     }
 
-    if (copy_to_user(buf, dev->buf + *off, len)) {
+    if (copy_to_user(buf, dev->buf, len)) {
         return -EFAULT;
     }
 
     dev->has_data = 0;
-    return 0;
+    return len;
 }
 
 static ssize_t hello_write(struct file* file, const char __user* buf, size_t len, loff_t *off) {
