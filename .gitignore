@@ -21,5 +21,8 @@
 Module.symvers
 modules.order
 
+# 用户态测试程序编译产物（无扩展名的静态可执行文件）
+experiments/**/*_test
+
 # 日志
 *.log
