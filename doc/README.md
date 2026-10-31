@@ -13,7 +13,7 @@
 | [03-filesystem](./03-filesystem/) | 文件系统与 procfs | 11 |
 | [04-scheduling](./04-scheduling/) | 进程调度 | 15 |
 | [05-memory](./05-memory/) | 内存管理 | 21 |
-| [06-module](./06-module/) | 内核模块与驱动 | 8 |
+| [06-module](./06-module/) | 内核模块与驱动 | 9 |
 
 ## 命名约定
 
@@ -153,5 +153,6 @@
 | 06 | [字符设备驱动](./06-module/06-字符设备驱动.md) | cdev、file_operations、注册三步、设备号、chrdev_open 多态、copy_to_user、read EOF |
 | 07 | [字符设备驱动进阶](./06-module/07-字符设备驱动进阶.md) | write/copy_from_user、ioctl/unlocked_ioctl、class_create/device_create 自动建节点、devtmpfs |
 | 08 | [多实例设备驱动](./06-module/08-多实例设备驱动.md) | container_of 识别实例、file->private_data 记忆实例、注册循环、每实例独立状态 |
+| 09 | [阻塞 IO](./06-module/09-阻塞IO.md) | wait_event_interruptible 睡眠、wake_up_interruptible 唤醒、生产者-消费者、interruptible 语义 |
 
 > 后续教学新增的文档，放入对应子目录并同步更新本表。

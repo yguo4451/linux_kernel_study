@@ -6,6 +6,7 @@
 #include <linux/uaccess.h>
 #include <linux/ioctl.h>
 #include <linux/device.h>
+#include <linux/wait.h>
 
 
 #define DEVICE_NAME "hello_dev"
@@ -23,6 +24,8 @@ struct hello_dev {
     struct cdev cdev;
     char buf[128];
     int id;
+    int has_data; 
+    wait_queue_head_t wq;
 };
 
 
@@ -36,21 +39,25 @@ static int hello_open(struct inode* inode, struct file* file) {
 
 static ssize_t hello_read(struct file* file, char __user *buf, size_t len, loff_t* off) {
     struct hello_dev* dev = file->private_data;
-    int msg_len = strlen(dev->buf);
 
-    if (*off >= msg_len) {
-        return 0;
+    int msg_len = 0;
+
+    if (wait_event_interruptible(dev->wq, dev->has_data)) {
+        return -ERESTARTSYS;
     }
-    if (len > msg_len - *off) {
-        len = msg_len - *off;
+    msg_len = strlen(dev->buf);
+
+
+    if (len > msg_len ) {
+        len = msg_len;
     }
 
     if (copy_to_user(buf, dev->buf + *off, len)) {
         return -EFAULT;
     }
 
-    *off += len;
-    return len;
+    dev->has_data = 0;
+    return 0;
 }
 
 static ssize_t hello_write(struct file* file, const char __user* buf, size_t len, loff_t *off) {
@@ -66,6 +73,9 @@ static ssize_t hello_write(struct file* file, const char __user* buf, size_t len
     }
 
     dev->buf[len] = '\0';
+
+    dev->has_data = 1;
+    wake_up_interruptible(&dev->wq);
     return len;
 
 }
@@ -131,7 +141,11 @@ static int __init hello_dev_init(void) {
             cdev_del(&hello_devs[i].cdev);
             goto err_del_cdev;
         }
+
+        init_waitqueue_head(&hello_devs[i].wq);
     }
+
+
 
     return 0;
 
