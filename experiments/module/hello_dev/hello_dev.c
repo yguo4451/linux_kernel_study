@@ -7,6 +7,7 @@
 #include <linux/ioctl.h>
 #include <linux/device.h>
 #include <linux/wait.h>
+#include <linux/poll.h>
 
 
 #define DEVICE_NAME "hello_dev"
@@ -91,6 +92,19 @@ static long hello_ioctl(struct file* file, unsigned int cmd, unsigned long arg) 
     }
 }
 
+static __poll_t hello_poll(struct file* file, struct poll_table_struct * wait) {
+    struct hello_dev* dev = file->private_data;
+
+    __poll_t mask = 0;
+    poll_wait(file, &dev->wq, wait);
+
+    if (dev->has_data) {
+        mask |= EPOLLIN |EPOLLRDNORM;
+    }
+
+    return mask;
+}
+
 static int hello_release(struct inode* inode, struct file* file) {
     return 0;
 }
@@ -102,6 +116,7 @@ static struct file_operations hello_fops = {
     .write = hello_write,
     .release = hello_release,
     .unlocked_ioctl = hello_ioctl,
+    .poll = hello_poll,
 };
 
 
