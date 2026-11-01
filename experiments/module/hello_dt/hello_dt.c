@@ -127,13 +127,20 @@ static struct file_operations hello_fops = {
 
 
 static int hello_probe(struct platform_device* pdev) {
-    printk(KERN_INFO "hello_plat: probe called, name=%s\n", pdev->name);
+    printk(KERN_INFO "hello_dt: probe called, name=%s\n", pdev->name);
    
     int i = 0, ret = 0;
 
-    io_base = devm_platform_ioremap_resource(pdev, 0);
-    if (IS_ERR(io_base)) {
-        return PTR_ERR(io_base);
+    struct resource res;
+    ret = of_address_to_resource(pdev->dev.of_node, 0, &res);
+    if (ret) {
+        return ret;
+    }
+
+    // io_base = devm_platform_ioremap_resource(pdev, 0);
+    io_base = devm_ioremap(&pdev->dev, res.start, resource_size(&res));
+    if (!io_base) {
+        return -ENOMEM;
     }
 
 
@@ -196,7 +203,7 @@ err_unreg_region:
 }
 
 static void hello_remove(struct platform_device* pdev) {
-    printk(KERN_INFO "hello_plat: remove called\n");
+    printk(KERN_INFO "hello_dt: remove called\n");
     for (int i = 0; i < 2; ++i) {
         device_destroy(hello_class, dev_num+i);
         cdev_del(&hello_devs[i].cdev);
@@ -212,6 +219,8 @@ static const struct of_device_id hello_of_match[] = {
     {}
 };
 
+MODULE_DEVICE_TABLE(of, hello_of_match);
+
 static struct platform_driver hello_driver = {
     .probe = hello_probe,
     .remove = hello_remove,
@@ -224,40 +233,28 @@ static struct platform_driver hello_driver = {
 
 
 static struct platform_device *pdev;
-static struct resource res[1]; 
-
-
 
 
 
 static int __init hello_plat_init(void) {
 
-    struct device_node *np = of_find_node_by_name(NULL, "pl011");
+    struct device_node *np = of_find_node_by_path("/pl011@9000000");
     if (!np) {
         printk(KERN_ERR "no pl011 node\n");
         return -ENODEV;
     }
 
-    if (of_address_to_resource(np, 0, res)) {
-        printk(KERN_ERR "no reg\n");
-        return -EINVAL;
+    pdev = platform_device_alloc("my-uart", -1);
+    if (!pdev) {
+        return -ENOMEM;
     }
 
-    printk(KERN_INFO "pl011 base=0x%llx size=0x%llx\n",
-       (unsigned long long)res[0].start, (unsigned long long)resource_size(res));
-
-    /* ⭐ ② 虚拟地址 → 物理地址，填进 resource */
-    // res[0].start = 0x09000000;
-    // res[0].end = 0x09000fff;
-    // res[0].flags = IORESOURCE_MEM;
-    // res[0].name  = "uart0";
-
-    // ① 先注册"设备"
-    pdev = platform_device_register_simple("hello_dt", -1, res, 1);
-    if (IS_ERR(pdev)) {
-        return PTR_ERR(pdev);
+    pdev->dev.of_node = np;
+    int ret = platform_device_add(pdev);
+    if (ret) {
+        platform_device_put(pdev);   // 失败要 put 释放
+        return ret;
     }
-
 
     // ② 再注册"驱动" —— 名字匹配上 → 内核立刻自动调 probe
     return platform_driver_register(&hello_driver);
