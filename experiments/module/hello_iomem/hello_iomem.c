@@ -128,21 +128,11 @@ static int hello_probe(struct platform_device* pdev) {
    
     int i = 0, ret = 0;
 
-    struct resource* r;
-
-
-    r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-    if (!r) {
-        printk(KERN_ERR "hello_iomem: no MEM resource\n");
-        return -ENODEV; 
+    io_base = devm_platform_ioremap_resource(pdev, 0);
+    if (IS_ERR(io_base)) {
+        return PTR_ERR(io_base);
     }
-    io_base = ioremap(r->start, resource_size(r));
-    if (!io_base) {
-        printk(KERN_ERR "hello_iomem: ioremap failed\n");
-        return -ENOMEM;
-    }
-    printk(KERN_INFO "hello_iomem: phys=0x%llx -> virt=%px\n",
-       (unsigned long long)r->start, io_base);
+
 
     u32 fr = readl(io_base + 0x18); 
     printk(KERN_INFO "hello_iomem: UART FR=0x%x (TXFE=%d RXFE=%d)\n",
@@ -151,7 +141,7 @@ static int hello_probe(struct platform_device* pdev) {
         
     ret = alloc_chrdev_region(&dev_num, 0, 2, DEVICE_NAME);  //申请设备号
     if (ret) {
-        goto err_iounmap;
+        return ret;
     }
 
     // cdev_init(&hello_cdev, &hello_fops);
@@ -198,8 +188,7 @@ err_del_cdev:
 
 err_unreg_region:
     unregister_chrdev_region(dev_num, 2);
-err_iounmap:
-    iounmap(io_base);
+
     return ret;
 }
 
@@ -213,8 +202,6 @@ static void hello_remove(struct platform_device* pdev) {
     class_destroy(hello_class);
 
     unregister_chrdev_region(dev_num, 2);
-    iounmap(io_base);
-    printk(KERN_INFO "hello_iomem: iounmap done\n");
 }
 
 static struct platform_driver hello_driver = {

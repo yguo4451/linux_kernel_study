@@ -13,7 +13,7 @@
 | [03-filesystem](./03-filesystem/) | 文件系统与 procfs | 11 |
 | [04-scheduling](./04-scheduling/) | 进程调度 | 15 |
 | [05-memory](./05-memory/) | 内存管理 | 21 |
-| [06-module](./06-module/) | 内核模块与驱动 | 12 |
+| [06-module](./06-module/) | 内核模块与驱动 | 13 |
 
 ## 命名约定
 
@@ -157,5 +157,6 @@
 | 10 | [poll/epoll 多设备监控](./06-module/10-poll-epoll.md) | .poll 回调、poll_wait 登记、EPOLLIN mask、一个线程等 N 个设备 |
 | 11 | [platform 总线驱动](./06-module/11-platform驱动.md) | 总线-设备-驱动分离、platform_device/driver、platform_match 名字匹配、probe/remove 自动回调、与纯 cdev 对比 |
 | 12 | [设备资源与 ioremap](./06-module/12-设备资源与ioremap.md) | struct resource、ioremap 拒绝 RAM（arm64 源码）、memremap 与线性映射复用、virt_to_phys 边界、用户态地址走页表 |
+| 13 | [资源声明与 devm 托管](./06-module/13-资源声明与devm托管.md) | request_mem_region、IORESOURCE_BUSY 标志、insert vs request、嵌套现象、devm_ioremap_resource 自动清理 |
 
 > 后续教学新增的文档，放入对应子目录并同步更新本表。
