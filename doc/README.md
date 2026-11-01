@@ -13,7 +13,7 @@
 | [03-filesystem](./03-filesystem/) | 文件系统与 procfs | 11 |
 | [04-scheduling](./04-scheduling/) | 进程调度 | 15 |
 | [05-memory](./05-memory/) | 内存管理 | 21 |
-| [06-module](./06-module/) | 内核模块与驱动 | 14 |
+| [06-module](./06-module/) | 内核模块与驱动 | 15 |
 
 ## 命名约定
 
@@ -145,6 +145,7 @@
 
 | 编号 | 文档 | 内容 |
 |------|------|------|
+| 00 | [驱动知识全景图](./06-module/00-驱动知识全景图.md) | 五张图串起完整驱动链路：用户态→VFS→cdev→platform→resource→硬件，14 课索引 |
 | 01 | [hello 模块与 taint 机制](./06-module/01-hello模块与taint机制.md) | 第一个内核模块全流程、编译三前提（Makefile/KDIR/Module.symvers）、taint 污染标记、lsmod 字段解读 |
 | 02 | [insmod 调用链](./06-module/02-insmod调用链.md) | finit_module/init_module 系统调用、幂等去重、load_module 十五步、do_init_module |
 | 03 | [模块重定位](./06-module/03-模块重定位.md) | layout_and_allocate 定址、simplify_symbols 定符号、apply_relocations 改写引用、arm64 指令级重定位 |
