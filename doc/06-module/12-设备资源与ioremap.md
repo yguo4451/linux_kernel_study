@@ -68,7 +68,67 @@ if (WARN_ON(pfn_is_map_memory(__phys_to_pfn(phys_addr))))
 
 **为什么拒绝**：RAM 已经有内核的线性映射，再用 `ioremap` 映射一遍会建立"不可缓存、强序"的设备属性映射，破坏缓存一致性。所以 arm64 加了这层安全检查（x86 相对宽松）。
 
-## 五、memremap：映射 RAM
+## 五、真 ioremap：映射 MMIO 设备寄存器（成功实验）
+
+避开 RAM，`ioremap` 一个真实的 MMIO 地址——QEMU virt 的 PL011 串口在 `0x09000000`：
+
+```c
+res[0].start = 0x09000000;   // PL011 UART（MMIO，不是 RAM）
+res[0].end   = 0x09000fff;
+res[0].flags = IORESOURCE_MEM;
+
+io_base = ioremap(r->start, resource_size(r));   // 这次不会被拒
+u32 fr = readl(io_base + 0x18);                  // UARTFR，偏移 0x18，只读
+```
+
+dmesg 输出：
+
+```
+hello_iomem: phys=0x09000000 -> virt=ffff800080033000
+hello_iomem: UART FR=0x90 (TXFE=1 RXFE=1)
+```
+
+`FR=0x90` = `TXFE=1`（发送 FIFO 空）+ `RXFE=1`（接收 FIFO 空），是 UART 硬件实时状态，证明 `readl` 真的通到了硬件。
+
+### 地址落在哪个区：arm64 地址布局
+
+两课实验的虚拟地址对比：
+
+| | 虚拟地址 | 落在 | 性质 |
+|---|---|---|---|
+| memremap RAM | `ffff24a303044000` | 线性映射区 | 复用 `__va` |
+| ioremap MMIO | `ffff800080033000` | vmalloc 区 | 新建映射 |
+
+源码 `arch/arm64/include/asm/memory.h`（VA_BITS=48）：
+
+```c
+#define PAGE_OFFSET    (-(1UL << 48))       // 0xffff_0000_0000_0000 线性映射起点
+#define PAGE_END       (-(1UL << 47))       // 0xffff_8000_0000_0000 线性映射终点
+#define MODULES_END    (MODULES_VADDR + 2G) // 0xffff_8000_8000_0000
+#define VMALLOC_START  MODULES_END          // 0xffff_8000_8000_0000 vmalloc 起点
+```
+
+- `kmalloc` 地址 `ffff24a3...` 在 `[PAGE_OFFSET, PAGE_END)` → **线性映射区**
+- `ioremap` 地址 `ffff800080033000` 在 `VMALLOC_START` 之上 → **vmalloc 区**
+
+这才是"映射"二字的真义：`ioremap` 在 vmalloc 区**新建了页表映射**，虚拟地址和物理地址无简单关系。
+
+### 别名映射：同一物理地址的多个虚拟地址
+
+`/proc/iomem` 显示 UART 早已被内核自带驱动声明：
+
+```
+09000000-09000fff : uart0    ← amba-pl011 驱动已 request_mem_region
+```
+
+所以 `0x09000000` 实际被映射了两次：
+
+- `amba-pl011` 的映射（console 正在用）
+- 我们 `hello_iomem` 的映射（`ffff800080033000`）
+
+页表允许多个 PTE 指向同一 PFN（别名映射），但**缓存属性必须兼容**。真实驱动的正确姿势是用 `devm_platform_ioremap_resource`（内部先 `request_mem_region` 声明占用），避免两个驱动抢同一块硬件。
+
+## 六、memremap：映射 RAM
 
 正确做法是 `memremap`：
 
@@ -87,7 +147,7 @@ memunmap(io_base);
 | arm64 限制 | **拒绝 RAM** | 允许 RAM |
 | 对应场景 | 串口/GPIO/网卡寄存器 | 映射某段物理内存 |
 
-## 六、线性映射（direct map）：为什么 memremap 会"偷懒"
+## 七、线性映射（direct map）：为什么 memremap 会"偷懒"
 
 实验 dmesg 输出：
 
@@ -116,7 +176,7 @@ memremap 文档注释：`MEMREMAP_WB` 且区域是 RAM 时，**绕过建立新�
 
 所以 `memremap(virt_to_phys(x)) == x` 是必然的：`virt_to_phys` 和 `__va` 互逆。这揭示了**线性映射的本质**——内核启动时把整块 RAM 做了 1:1 固定偏移映射，RAM 的物理地址和虚拟地址之间只是加减一个常数。
 
-## 七、virt_to_phys 的适用边界
+## 八、virt_to_phys 的适用边界
 
 `virt_to_phys` 只是一行加减法（arm64 `arch/arm64/include/asm/memory.h`）：
 
@@ -130,7 +190,7 @@ memremap 文档注释：`MEMREMAP_WB` 且区域是 RAM 时，**绕过建立新�
 - ❌ `vmalloc` 内存：在 vmalloc 区，虚拟连续但物理不连续，`virt_to_phys` 结果错误
 - ❌ **用户态 `malloc` 地址**：在进程地址空间，物理页分散，必须走页表
 
-## 八、延伸：用户态地址走页表（pagemap）
+## 九、延伸：用户态地址走页表（pagemap）
 
 用户态 `malloc` 的地址**不能像 `virt_to_phys` 那样算**，只能**查页表**：
 
@@ -151,11 +211,12 @@ p2 vaddr = 0xee82530, phys = 0x4886c530
 
 相邻虚拟页的物理地址差了约 100MB，证明用户态地址和物理地址**没有固定偏移关系**，必须逐页查页表。
 
-## 九、要点回顾
+## 十、要点回顾
 
 ```
 kmalloc 地址  ──减法(virt_to_phys)──>  物理地址     （线性映射，固定偏移）
 ioremap        ──建新映射──>  MMIO 寄存器          （设备寄存器专用，拒绝 RAM）
 memremap       ──复用线性映射──> RAM              （WB，直接返回 direct map）
 用户态地址     ──查页表(pagemap/GUP)──> 散落物理页 （无固定关系，且会变）
+别名映射       ──多 PTE 指向同一 PFN──> 缓存属性必须兼容（拒绝 ioremap RAM 的深层原因）
 ```

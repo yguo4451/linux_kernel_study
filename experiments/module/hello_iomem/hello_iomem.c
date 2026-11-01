@@ -18,8 +18,6 @@
 #define DEVICE_NAME "hello_iomem"
 #define HELLO_MAGIC 'H'  
 #define HELLO_RESET _IO(HELLO_MAGIC, 0)
-#define MAGIC_VAL 0xDEADBEEF 
-
 
 static dev_t dev_num;  //设备号
 static struct class* hello_class; 
@@ -34,7 +32,6 @@ struct hello_dev {
 
 
 static struct hello_dev hello_devs[2];
-static void* fake_reg;
 static void __iomem* io_base;
 
 static int hello_open(struct inode* inode, struct file* file) {
@@ -132,33 +129,29 @@ static int hello_probe(struct platform_device* pdev) {
     int i = 0, ret = 0;
 
     struct resource* r;
-    u32 val;
+
 
     r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
     if (!r) {
         printk(KERN_ERR "hello_iomem: no MEM resource\n");
         return -ENODEV; 
     }
-    io_base = memremap(r->start, resource_size(r), MEMREMAP_WB);
+    io_base = ioremap(r->start, resource_size(r));
     if (!io_base) {
         printk(KERN_ERR "hello_iomem: ioremap failed\n");
         return -ENOMEM;
     }
+    printk(KERN_INFO "hello_iomem: phys=0x%llx -> virt=%px\n",
+       (unsigned long long)r->start, io_base);
 
-    printk(KERN_INFO "hello_iomem: phys=0x%llx size=0x%llx -> virt=%px (kmalloc=%px)\n",
-        (unsigned long long)r->start,
-        (unsigned long long)resource_size(r),
-        io_base, fake_reg);
-
-    writel(MAGIC_VAL, io_base);
-    val = readl(io_base);
-    printk(KERN_INFO "hello_iomem: wrote=0x%x readback=0x%x -> %s\n",
-        MAGIC_VAL, val, (val == MAGIC_VAL) ? "MATCH" : "MISMATCH");
+    u32 fr = readl(io_base + 0x18); 
+    printk(KERN_INFO "hello_iomem: UART FR=0x%x (TXFE=%d RXFE=%d)\n",
+        fr, (fr >> 7) & 1, (fr >> 4) & 1);
 
         
     ret = alloc_chrdev_region(&dev_num, 0, 2, DEVICE_NAME);  //申请设备号
     if (ret) {
-        goto err_memunmap;
+        goto err_iounmap;
     }
 
     // cdev_init(&hello_cdev, &hello_fops);
@@ -205,8 +198,8 @@ err_del_cdev:
 
 err_unreg_region:
     unregister_chrdev_region(dev_num, 2);
-err_memunmap:
-    memunmap(io_base);
+err_iounmap:
+    iounmap(io_base);
     return ret;
 }
 
@@ -220,8 +213,8 @@ static void hello_remove(struct platform_device* pdev) {
     class_destroy(hello_class);
 
     unregister_chrdev_region(dev_num, 2);
-    memunmap(io_base);
-    printk(KERN_INFO "hello_iomem: memunmap done\n");
+    iounmap(io_base);
+    printk(KERN_INFO "hello_iomem: iounmap done\n");
 }
 
 static struct platform_driver hello_driver = {
@@ -239,23 +232,17 @@ static struct resource res[1];
 
 static int __init hello_plat_init(void) {
 
-    /* ⭐ ① 分一页内存当"假硬件寄存器" */
-    fake_reg = kmalloc(PAGE_SIZE, GFP_KERNEL);
-    if (!fake_reg) {
-        return -ENOMEM;
-    }
-    memset(fake_reg, 0, PAGE_SIZE);
+
 
     /* ⭐ ② 虚拟地址 → 物理地址，填进 resource */
-    res[0].start = virt_to_phys(fake_reg);
-    res[0].end = res[0].start + PAGE_SIZE -1;
+    res[0].start = 0x09000000;
+    res[0].end = 0x09000fff;
     res[0].flags = IORESOURCE_MEM;
-    res[0].name  = "fake_reg";
+    res[0].name  = "uart0";
 
     // ① 先注册"设备"
     pdev = platform_device_register_simple("hello_iomem", -1, res, 1);
     if (IS_ERR(pdev)) {
-        kfree(fake_reg);
         return PTR_ERR(pdev);
     }
 
@@ -268,7 +255,6 @@ static void __exit hello_plat_exit(void) {
     platform_driver_unregister(&hello_driver);
     platform_device_unregister(pdev);
 
-    kfree(fake_reg);
 }
 
 module_init(hello_plat_init);
