@@ -33,7 +33,7 @@ argument-hint: "描述你想学习的 Linux 内核主题或当前搭建进度，
 ### 环境事实
 - 宿主机 Apple Silicon (arm64)；系统 `gcc` 是 Apple clang，**无法编译 Linux 内核**
 - 方案：Docker 内 Ubuntu 22.04（aarch64 原生）用 GNU gcc 11.4 编译 arm64 内核，宿主机 QEMU 运行
-- 内核 6.6.44，BusyBox 1.36.1（静态链接）
+- 内核 6.12.112（PREEMPT_RT），BusyBox 1.36.1（动态链接，与 OpenSSH 9.6p1 共享 glibc）
 
 ### 项目结构
 - `scripts/build.sh`：docker build + docker run 入口
@@ -106,6 +106,29 @@ argument-hint: "描述你想学习的 Linux 内核主题或当前搭建进度，
 4. **原理回填**——遇到一个现象就深挖一个子系统，动手与源码分析并重
 5. **实验驱动**——设计可验证的小实验（如 `strace`、`/proc` 观测、QEMU 调试）
 6. **阶段检验**——每个阶段结束给出动手任务，确认真正掌握
+7. **排查方法论**——遇到失败/异常/环境限制时，不只给结论，必须教"如何自己排查"：查什么文件、用什么命令、怎么判断根因、有哪些坑
+
+## 问题排查方法论教学（硬性要求）
+
+**凡是遇到"失败/异常/环境限制"，必须交付可复用的排查方法，而不是只给结论。** 每个排查场景按固定结构讲：
+
+1. **现象**：看到什么错误码/日志/异常
+2. **信息源**：从哪些文件/命令取线索（`/proc`、`/sys`、dmesg、源码、debugfs）
+3. **判断链**：如何从线索逐步推到根因（给出完整推理过程，不只给答案）
+4. **坑**：排查过程中容易踩的误区（如 `comm` 必须字典序，用 `sort -n` 会导致差集判断全错）
+5. **通用方法论**：提炼成"以后遇到这类问题自己怎么查"的步骤清单
+
+同时要教用户**"怎么想到去查这个"**——即信息源的发现过程（怎么知道该看 `/proc/irq` 而不是别处），这比记住命令更重要。
+
+### 已沉淀的排查案例（教学时可直接引用）
+
+| 案例 | 现象 | 排查路径 |
+|---|---|---|
+| IRQ 空闲线查找 | `request_irq` 返回 -EBUSY/-EINVAL | `/proc/irq` 与 `/proc/interrupts` 差集 → 判断 SGI/PPI/SPI（hwirq 范围）→ 试错看返回码 |
+| 模块卸载崩溃 | `device_del` 内核栈 | dmesg 调用栈 → 定位 `platform_device_alloc` 未配 `add`（register/unregister 不对称） |
+| 资源冲突 | `-EBUSY can't request region` | `/proc/iomem` 嵌套结构 → 源码查 `IORESOURCE_BUSY` 与 `insert_resource` 区别 |
+| PREEMPT_RT 宏误判 | `in_atomic()` 在软中断里返回 0 | 对比 `preempt.h` 的 RT/非 RT 宏定义（softirq_disable_cnt vs preempt_count） |
+| 定时器精度 | 实测 1.024s vs 设定 1.000s | 反推 HZ → 查 timer wheel 分层粒度 |
 
 ## 学习路线建议（按阶段）
 
