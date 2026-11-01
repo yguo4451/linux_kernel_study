@@ -13,7 +13,7 @@
 | [03-filesystem](./03-filesystem/) | 文件系统与 procfs | 11 |
 | [04-scheduling](./04-scheduling/) | 进程调度 | 15 |
 | [05-memory](./05-memory/) | 内存管理 | 21 |
-| [06-module](./06-module/) | 内核模块与驱动 | 10 |
+| [06-module](./06-module/) | 内核模块与驱动 | 12 |
 
 ## 命名约定
 
@@ -155,5 +155,7 @@
 | 08 | [多实例设备驱动](./06-module/08-多实例设备驱动.md) | container_of 识别实例、file->private_data 记忆实例、注册循环、每实例独立状态 |
 | 09 | [阻塞 IO](./06-module/09-阻塞IO.md) | wait_event_interruptible 睡眠、wake_up_interruptible 唤醒、生产者-消费者、interruptible 语义 |
 | 10 | [poll/epoll 多设备监控](./06-module/10-poll-epoll.md) | .poll 回调、poll_wait 登记、EPOLLIN mask、一个线程等 N 个设备 |
+| 11 | [platform 总线驱动](./06-module/11-platform驱动.md) | 总线-设备-驱动分离、platform_device/driver、platform_match 名字匹配、probe/remove 自动回调、与纯 cdev 对比 |
+| 12 | [设备资源与 ioremap](./06-module/12-设备资源与ioremap.md) | struct resource、ioremap 拒绝 RAM（arm64 源码）、memremap 与线性映射复用、virt_to_phys 边界、用户态地址走页表 |
 
 > 后续教学新增的文档，放入对应子目录并同步更新本表。
