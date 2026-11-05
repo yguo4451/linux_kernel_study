@@ -13,7 +13,7 @@
 | [03-filesystem](./03-filesystem/) | 文件系统与 procfs | 11 |
 | [04-scheduling](./04-scheduling/) | 进程调度 | 15 |
 | [05-memory](./05-memory/) | 内存管理 | 21 |
-| [06-module](./06-module/) | 内核模块与驱动 | 20 |
+| [06-module](./06-module/) | 内核模块与驱动 | 21 |
 
 ## 命名约定
 
@@ -165,5 +165,6 @@
 | 17 | [问题排查方法论](./06-module/17-问题排查方法论.md) | 五步排查法、IRQ 差集查找、卸载崩溃/资源冲突/RT 宏误判/定时器精度五个案例、工具速查表 |
 | 18 | [竞态与原子操作](./06-module/18-竞态与原子操作.md) | 竞态本质、atomic_t（LDXR/STXR）、spinlock、4 线程实测丢 397 次更新、kthread use-after-free 与 completion 方案 |
 | 19 | [mutex 与死锁](./06-module/19-mutex与死锁.md) | mutex vs spinlock、选择决策树、ABBA 死锁、Coffman 四条件、lockdep、mutex_trylock 安全探测 |
+| 20 | [RCU 与内存屏障](./06-module/20-RCU与内存屏障.md) | 读侧零开销、复制替换、宽限期实测 17~25ms、smp_store_release/load_acquire、kzalloc vs kmalloc |
 
 > 后续教学新增的文档，放入对应子目录并同步更新本表。
